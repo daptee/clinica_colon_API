@@ -177,20 +177,30 @@ class PatientController extends Controller
             })
             ->orderBy('id', 'desc');
             
-            $total = $query->count();
-            $total_per_page = $request->total_per_page ?? 30;
-            $data  = $query->paginate($total_per_page);
-            $current_page = $request->page ?? $data->currentPage();
-            $last_page = $data->lastPage();
+            if($request->list_all){
+                $data = $query->get();
 
-            Audith::new(Auth::user()->id, "Listado de pacientes", null, 200, null);
+                Audith::new(Auth::user()->id, "Listado de pacientes", null, 200, null);
+
+                return response(compact("data"));
+            }else{
+                $total = $query->count();
+                $total_per_page = $request->total_per_page ?? 30;
+                $data  = $query->paginate($total_per_page);
+                $current_page = $request->page ?? $data->currentPage();
+                $last_page = $data->lastPage();
+
+                Audith::new(Auth::user()->id, "Listado de pacientes", null, 200, null);
+                
+                return response(compact("data", "total", "total_per_page", "current_page", "last_page"));
+            }
+
+            // Audith::new(Auth::user()->id, "Listado de pacientes", null, 200, null);
         } catch (Exception $e) {
             Audith::new(Auth::user()->id, "Listado de pacientes", null, 500, $e->getMessage());
             Log::debug(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()]);
             return response(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()], 500);
         }
-
-        return response(compact("data", "total", "total_per_page", "current_page", "last_page"));
     }
 
     public function getIdsPatients($id_user_type, $id_user)
@@ -237,21 +247,24 @@ class PatientController extends Controller
             })
             ->orderBy('id', 'desc');
             
-            $total = $query->count();
-            $total_per_page = $request->total_per_page ?? 30;
-            $data  = $query->paginate($total_per_page);
-            $current_page = $request->page ?? $data->currentPage();
-            $last_page = $data->lastPage();
-
-
-            Audith::new(Auth::user()->id, "Listado de pacientes", null, 200, null);
+            if($request->list_all){
+                $data = $query->get();
+                Audith::new(Auth::user()->id, "Listado de pacientes", null, 200, null);
+                return response(compact("data"));
+            }else{
+                $total = $query->count();
+                $total_per_page = $request->total_per_page ?? 30;
+                $data  = $query->paginate($total_per_page);
+                $current_page = $request->page ?? $data->currentPage();
+                $last_page = $data->lastPage();
+                Audith::new(Auth::user()->id, "Listado de pacientes", null, 200, null);
+                return response(compact("data", "total", "total_per_page", "current_page", "last_page"));
+            }
         } catch (Exception $e) {
             Audith::new(Auth::user()->id, "Listado de pacientes", null, 500, $e->getMessage());
             Log::debug(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()]);
             return response(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()], 500);
         }
-
-        return response(compact("data", "total", "total_per_page", "current_page", "last_page"));
     }
 
     public function getIdsPatientsClinicHistory($id_user)
