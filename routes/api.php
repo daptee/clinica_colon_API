@@ -8,7 +8,10 @@ use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\UserClinicHistoryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserSpecialtyController;
+use App\Mail\TestMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
 Route::controller(AuthController::class)->group(function () {
@@ -91,4 +94,15 @@ Route::controller(GetsFunctionsController::class)->group(function () {
     Route::get('/specialties', 'specialties');
     Route::get('/users/status', 'usersStatus');
     Route::get('/social_works', 'socialWorks');
+});
+
+Route::get('test-mail', function() {
+    try {
+        $text = "Test de envio de mail Clinica Colon";
+        Mail::to("enzo100amarilla@gmail.com")->send(new TestMail("enzo100amarilla@gmail.com", $text));
+        return 'Mail enviado';
+    } catch (\Throwable $th) {
+        Log::debug(print_r([$th->getMessage(), $th->getLine()],  true));
+        return 'Mail no enviado';
+    }
 });
