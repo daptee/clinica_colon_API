@@ -175,21 +175,31 @@ class ProfessionalController extends Controller
             })
             ->orderBy('id', 'desc');
 
-            $total = $query->count();
-            $total_per_page = $request->total_per_page ?? 30;
-            $data  = $query->paginate($total_per_page);
-            $current_page = $request->page ?? $data->currentPage();
-            $last_page = $data->lastPage();
+            if($request->list_all){
+                $data = $query->get();
 
+                Audith::new(Auth::user()->id, "Listado de profesionales", null, 200, null);
+
+                return response(compact("data"));
+            }else{
+                $total = $query->count();
+                $total_per_page = $request->total_per_page ?? 30;
+                $data  = $query->paginate($total_per_page);
+                $current_page = $request->page ?? $data->currentPage();
+                $last_page = $data->lastPage();
+
+                Audith::new(Auth::user()->id, "Listado de profesionales", null, 200, null);
+
+                return response(compact("data", "total", "total_per_page", "current_page", "last_page"));
+            }
+                
             // $data = $this->model::where('id_user_type', UserType::PROFESIONAL)->with($this->model::DATA_WITH)->get();
-            Audith::new(Auth::user()->id, "Listado de profesionales", null, 200, null);
+            // Audith::new(Auth::user()->id, "Listado de profesionales", null, 200, null);
         } catch (Exception $e) {
             Log::debug(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()]);
             Audith::new(Auth::user()->id, "Listado de profesionales", null, 500, $e->getMessage());
             return response(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()], 500);
         }
-
-        return response(compact("data", "total", "total_per_page", "current_page", "last_page"));
     }
 
     public function getIdsProfessionals($id_admin)
