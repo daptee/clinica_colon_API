@@ -10,6 +10,7 @@ use App\Models\Patient;
 use App\Models\PatientFile;
 use App\Models\Professional;
 use App\Models\User;
+use App\Models\UserStatus;
 use App\Models\UserType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -38,8 +39,6 @@ class PatientController extends Controller
             'name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'dni' => 'required|unique:users,dni',
-            'data' => 'required'
         ]);
     
         if ($validator->fails()) {
@@ -56,10 +55,12 @@ class PatientController extends Controller
             return response(["message" => "Usuario invalido"], 400);
 
         $id_user_token = Auth::user()->id ?? null;
+        $password = Str::random(10);
+
         try {
             DB::beginTransaction();
                 $new_user = new User($request->all());
-                $new_user->password = Str::random(10);
+                $new_user->password = $password;
                 $new_user->id_user_type = UserType::PACIENTE;
                 $new_user->save();
 
@@ -79,7 +80,7 @@ class PatientController extends Controller
 
         if($new_user){
             try {
-                Mail::to($new_user->email)->send(new WelcomeUserMailable($new_user));
+                Mail::to($new_user->email)->send(new WelcomeUserMailable($new_user, $password));
                 Audith::new($id_user_token, "Envio de mail de bienvenida exitoso.", $request->all(), 200, null);
             } catch (Exception $e) {
                 Audith::new($id_user_token, "Error al enviar mail de bienvenida.", $request->all(), 500, $e->getMessage());
@@ -105,11 +106,6 @@ class PatientController extends Controller
                 'max:255',
                 Rule::unique('users')->ignore($id),
             ],
-            'dni' => [
-                'required',
-                Rule::unique('users')->ignore($id),
-            ],
-            'data' => 'required',
         ]);
     
         if ($validator->fails()) {
@@ -438,5 +434,55 @@ class PatientController extends Controller
         $data = PatientFile::where('id_patient', $id)->orderBy('id', 'desc')->get();
 
         return response(compact("data"));
+    }
+
+    public function activate_deactivate(Request $request, $id)
+    {
+        $message = "Error al obtener registro";
+        $data = null;
+        try {
+            $user = User::find($id);
+            
+            if(!$user)
+                return response(["message" => "ID usuario invalido"], 400);
+        
+            if($user->id_user_type != UserType::PACIENTE)
+                return response(["message" => "ID paciente invalido"], 400);
+            
+            $user->id_user_status = $request->status;
+            $user->save();
+
+            Audith::new(Auth::user()->id, "Cambio de estado usuario", $request->all(), 200, null);
+        } catch (Exception $e) {
+            Audith::new(Auth::user()->id, "Cambio de estado usuario", $request->all(), 500, $e->getMessage());
+            Log::debug(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()]);
+            return response(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()], 500);
+        }
+
+        $message = "Usuario actualizado con exito";
+        $data = User::getAllDataUserPatient($id);
+
+        return response(compact("message", "data"));
+    }
+
+    public function destroy($id_patient)
+    {
+        $user = User::find($id_patient);
+        if($user->id_user_type != UserType::PACIENTE)
+            return response(["message" => "id patient invalido"], 400);
+
+        $message = "Error al obtener paciente";
+        $id_user = Auth::user()->id ?? null;
+        try {
+            $user->delete();
+            Audith::new($id_user, "Eliminar paciente", ["id_patient" => $id_patient], 200, null);
+        } catch (Exception $e) {
+            Audith::new($id_user, "Eliminar paciente", ["id_patient" => $id_patient], 500, $e->getMessage());
+            Log::debug(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()]);
+            return response(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()], 500);
+        }
+
+        $message = "Paciente eliminado con exito";
+        return response(compact("message"));
     }
 }

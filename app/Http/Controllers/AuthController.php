@@ -65,6 +65,7 @@ class AuthController extends Controller
 
         $message = "Error al crear {$this->s} en registro";
         $data = $request->all();
+        $password = $data['user']['password'];
         try {
             DB::beginTransaction();
                 $new_user = new $this->model($data['user']);
@@ -94,7 +95,7 @@ class AuthController extends Controller
 
         if($new_user){
             try {
-                Mail::to($new_user->email)->send(new WelcomeUserMailable($new_user));
+                Mail::to($new_user->email)->send(new WelcomeUserMailable($new_user, $password));
                 Audith::new($new_user->id, "Envio de mail de bienvenida exitoso.", $request->all(), 200, null);
             } catch (Exception $e) {
                 Audith::new($new_user->id, "Error al enviar mail de bienvenida.", $request->all(), 500, $e->getMessage());
@@ -108,29 +109,54 @@ class AuthController extends Controller
         return response(compact("message", "data"));
     }
 
-    public function auth_login(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required',
-            'password' => 'required',
-        ]);
+    // public function auth_login(Request $request)
+    // {
+    //     $validator = Validator::make($request->all(), [
+    //         'email' => 'required',
+    //         'password' => 'required',
+    //     ]);
     
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Alguna de las validaciones falló',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
+    //     if ($validator->fails()) {
+    //         return response()->json([
+    //             'message' => 'Alguna de las validaciones falló',
+    //             'errors' => $validator->errors(),
+    //         ], 422);
+    //     }
 
+    //     $credentials = $request->only('email', 'password');
+    //     // Quitar DNI para login
+    //     $loginField = filter_var($credentials['email'], FILTER_VALIDATE_EMAIL) ? 'email' : 'dni';
+    //     try{
+    //         $user = User::where($loginField , $credentials['email'])->first();
+
+    //         if(!$user)
+    //             return response()->json(['message' => 'Usuario y/o clave no válidos.'], 400);
+
+    //         if (! $token = auth()->attempt([$loginField => $credentials['email'], 'password' => $credentials['password']])) {
+    //             return response()->json(['message' => 'Usuario y/o clave no válidos.'], 401);
+    //         }
+
+    //         Audith::new($user->id, "Login de usuario", $credentials['email'], 200, null);
+
+    //     }catch (Exception $e) {
+    //         Audith::new(null, "Login de usuario", $credentials['email'], 500, $e->getMessage());
+    //         Log::debug(["message" => "No fue posible crear el Token de Autenticación.", "error" => $e->getMessage(), "line" => $e->getLine()]);
+    //         return response()->json(['message' => 'No fue posible crear el Token de Autenticación.'], 500);
+    //     }
+    
+    //     return $this->respondWithToken($token);
+    // }
+
+    public function auth_login(LoginRequest $request)
+    {
         $credentials = $request->only('email', 'password');
-        $loginField = filter_var($credentials['email'], FILTER_VALIDATE_EMAIL) ? 'email' : 'dni';
         try{
-            $user = User::where($loginField , $credentials['email'])->first();
+            $user = User::where('email' , $credentials['email'])->first();
 
             if(!$user)
                 return response()->json(['message' => 'Usuario y/o clave no válidos.'], 400);
 
-            if (! $token = auth()->attempt([$loginField => $credentials['email'], 'password' => $credentials['password']])) {
+            if (! $token = auth()->attempt($credentials)) {
                 return response()->json(['message' => 'Usuario y/o clave no válidos.'], 401);
             }
 
@@ -143,7 +169,7 @@ class AuthController extends Controller
         }
     
         return $this->respondWithToken($token);
-    }
+    } 
 
     public function auth_account_recovery(Request $request)
     {
@@ -219,7 +245,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required',
-            'password' => 'required',
+            // 'password' => 'required',
         ]);
     
         if ($validator->fails()) {
@@ -239,7 +265,7 @@ class AuthController extends Controller
 
             DB::beginTransaction();
             
-                $user->password = $request->password;
+                // $user->password = $request->password;
                 $user->email_confirmation = now()->format('Y-m-d H:i:s');
                 $user->save();
             
