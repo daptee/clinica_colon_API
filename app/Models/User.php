@@ -151,6 +151,7 @@ class User extends Authenticatable implements JWTSubject
             'email' => $this->email,
             'user_type' => $this->user_type,
             'profile_picture' => $this->profile_picture,
+            'email_confirmation' => $this->email_confirmation
         ];
     }
 }
