@@ -40,7 +40,7 @@ Route::group(['middleware' => ['auth:api']], function ($router) {
     Route::post('users/admin/branch_office', [UserController::class, 'new_admin_branch_office']);
     Route::put('users/admin/branch_office/{id}', [UserController::class, 'update_admin_branch_office']);
     Route::post('users/token', [UserController::class, 'user_token']);
-    
+        
     // PatientController
     Route::post('users/patient', [PatientController::class, 'new_user_patient']);
     Route::post('users/patient/{id}', [PatientController::class, 'update_user_patient']);
@@ -50,6 +50,8 @@ Route::group(['middleware' => ['auth:api']], function ($router) {
     Route::post('patients/files', [PatientController::class, 'patient_files']);
     Route::post('patients/delete/files', [PatientController::class, 'delete_patient_files']);
     Route::get('users/patient/{id}', [PatientController::class, 'get_patient']);
+    Route::post('users/patients/activate_deactivate/{id_patient}', [PatientController::class, 'activate_deactivate']);
+    Route::delete('users/patients/delete/{id_patient}', [PatientController::class, 'destroy']);
 
     // ProfessionalController
     Route::post('users/profesional', [ProfessionalController::class, 'new_user_profesional']);
@@ -62,6 +64,8 @@ Route::group(['middleware' => ['auth:api']], function ($router) {
     Route::post('users/professional/special_dates', [ProfessionalController::class, 'professional_special_dates']);
     Route::get('users/professional/special_dates/{id_professional}', [ProfessionalController::class, 'get_professional_special_dates']);
     Route::get('professional/branch_offices', [ProfessionalController::class, 'get_professional_branch_offices']);
+    Route::post('users/professionals/activate_deactivate/{id_professional}', [ProfessionalController::class, 'activate_deactivate']);
+    Route::delete('users/professionals/delete/{id_patient}', [ProfessionalController::class, 'destroy']);
 
     // UserSpecialtyController
     Route::get('users/specialties', [UserSpecialtyController::class, 'get_specialties']);
@@ -86,6 +90,9 @@ Route::group(['middleware' => ['auth:api']], function ($router) {
     Route::get('shifts/get/status', [ShiftController::class, 'get_status_shifts']);
     Route::put('shifts/status', [ShiftController::class, 'change_status_shift']);
     Route::put('shifts/mass/cancellation', [ShiftController::class, 'mass_cancellation']);
+
+    // GetsFunctionsController
+    Route::get('search/general/data/filter', [GetsFunctionsController::class, 'search_general_data_filter']);
 });
 
 Route::controller(GetsFunctionsController::class)->group(function () {

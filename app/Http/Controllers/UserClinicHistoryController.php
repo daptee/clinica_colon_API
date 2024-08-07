@@ -41,7 +41,7 @@ class UserClinicHistoryController extends Controller
 
         try {
             // especialties por data
-            $data = ClinicHistory::with(['professional:id,name,last_name,profile_picture,data'])
+            $data = ClinicHistory::with(['professional:id,name,last_name,email,profile_picture,data', 'files'])
                     ->where('id_patient', $id)
                     ->when($request->id_professional, function ($query) use ($request) {
                         return $query->where('id_professional', $request->id_professional);
@@ -84,7 +84,9 @@ class UserClinicHistoryController extends Controller
             return response(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()], 500);
         }
 
-        return response(compact("data"));
+        $message = "Historia clinica almacenada correctamente.";
+
+        return response(compact("message", "data"));
     }
 
     public function get_clinic_history($id)

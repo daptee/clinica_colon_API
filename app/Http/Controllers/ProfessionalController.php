@@ -40,8 +40,7 @@ class ProfessionalController extends Controller
             'name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'dni' => 'required|unique:users,dni',
-            'data' => 'required',
+            'dni' => 'required',
         ]);
     
         if ($validator->fails()) {
@@ -57,10 +56,12 @@ class ProfessionalController extends Controller
         if(Auth::user()->id_user_type != UserType::ADMIN)
             return response(["message" => "Usuario invalido"], 400);
 
+        $password = Str::random(10);   
+
         try {
             DB::beginTransaction();
                 $new_user = new User($request->all());
-                $new_user->password = Str::random(10);
+                $new_user->password = $password;
                 $new_user->id_user_type = UserType::PROFESIONAL;
                 $new_user->save();
 
@@ -80,7 +81,7 @@ class ProfessionalController extends Controller
 
         if($new_user){
             try {
-                Mail::to($new_user->email)->send(new WelcomeUserMailable($new_user));
+                Mail::to($new_user->email)->send(new WelcomeUserMailable($new_user, $password));
             } catch (Exception $error) {
                 Log::debug(["message" => "Error al enviar mail de bienvenida.", "error" => $error->getMessage(), "line" => $error->getLine()]);
                 // Retornamos que no se pudo enviar el mail o no hace falta solo queda en el log?
@@ -106,9 +107,7 @@ class ProfessionalController extends Controller
             ],
             'dni' => [
                 'required',
-                Rule::unique('users')->ignore($id),
             ],
-            'data' => 'required',
         ]);
     
         if ($validator->fails()) {
@@ -514,5 +513,55 @@ class ProfessionalController extends Controller
         }
 
         return response(compact("data"));
+    }
+
+    public function activate_deactivate(Request $request, $id)
+    {
+        $message = "Error al obtener registro";
+        $data = null;
+        try {
+            $user = User::find($id);
+            
+            if(!$user)
+                return response(["message" => "ID usuario invalido"], 400);
+        
+            if($user->id_user_type != UserType::PROFESIONAL)
+                return response(["message" => "ID profesional invalido"], 400);
+            
+            $user->id_user_status = $request->status;
+            $user->save();
+
+            Audith::new(Auth::user()->id, "Cambio de estado usuario", $request->all(), 200, null);
+        } catch (Exception $e) {
+            Audith::new(Auth::user()->id, "Cambio de estado usuario", $request->all(), 500, $e->getMessage());
+            Log::debug(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()]);
+            return response(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()], 500);
+        }
+
+        $message = "Usuario actualizado con exito";
+        $data = User::getAllDataUserProfessional($id);
+
+        return response(compact("message", "data"));
+    }
+
+    public function destroy($id_professional)
+    {
+        $user = User::find($id_professional);
+        if($user->id_user_type != UserType::PROFESIONAL)
+            return response(["message" => "id professional invalido"], 400);
+
+        $message = "Error al obtener profesional";
+        $id_user = Auth::user()->id ?? null;
+        try {
+            $user->delete();
+            Audith::new($id_user, "Eliminar profesional", ["id_professional" => $id_professional], 200, null);
+        } catch (Exception $e) {
+            Audith::new($id_user, "Eliminar profesional", ["id_professional" => $id_professional], 500, $e->getMessage());
+            Log::debug(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()]);
+            return response(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()], 500);
+        }
+
+        $message = "Profesional eliminado con exito";
+        return response(compact("message"));
     }
 }
