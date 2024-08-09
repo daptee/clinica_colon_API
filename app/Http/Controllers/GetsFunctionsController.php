@@ -149,35 +149,45 @@ class GetsFunctionsController extends Controller
         $message = "Error al obtener registros";
         $data = [];
         $id_user = Auth::user()->id ?? null;
+
         try {
+
+            $patientIds = $this->getIdsPatients(Auth::user()->id_user_type, Auth::user()->id);
+            $professionalIds = $this->getIdsProfessionals(Auth::user()->id);
+
             $patients = User::with(['status'])
-                        ->select(['id', 'name', 'last_name','dni', 'email', 'id_user_status', 'data', 'profile_picture', 'created_at'])
-                        ->where('id_user_type', UserType::PACIENTE)
-                        ->whereIn('id', $this->getIdsPatients(Auth::user()->id_user_type, Auth::user()->id))
-                        ->when($request->q, function ($query) use ($request) {
-                            return $query->where('name', 'like', '%' . $request->q . '%')
-                                        ->orWhere('last_name', 'like', '%' . $request->q . '%')
-                                        ->orWhere('email', 'like', '%' . $request->q . '%')
-                                        ->orWhere('dni', 'like', '%' . $request->q . '%');
-                        })
-                        ->orderBy('id', 'desc')
-                        ->get();
+                ->select(['id', 'name', 'last_name', 'dni', 'email', 'id_user_status', 'data', 'profile_picture', 'created_at'])
+                ->whereIn('id', $patientIds)
+                ->orderBy('id', 'desc')
+                ->get();
 
             $professionals = User::with(['status'])
-                        ->select(['id', 'name', 'last_name','dni', 'email', 'id_user_status', 'data', 'profile_picture', 'created_at'])
-                        ->where('id_user_type', UserType::PROFESIONAL)
-                        ->whereIn('id', $this->getIdsProfessionals(Auth::user()->id))
-                        ->when($request->q, function ($query) use ($request) {
-                            return $query->where('name', 'like', '%' . $request->q . '%')
-                                        ->orWhere('last_name', 'like', '%' . $request->q . '%')
-                                        ->orWhere('email', 'like', '%' . $request->q . '%')
-                                        ->orWhere('dni', 'like', '%' . $request->q . '%');
-                        })
-                        ->orderBy('id', 'desc')
-                        ->get();
+                ->select(['id', 'name', 'last_name', 'dni', 'email', 'id_user_status', 'data', 'profile_picture', 'created_at'])
+                ->whereIn('id', $professionalIds)
+                ->orderBy('id', 'desc')
+                ->get();
 
-            $data['patients'] = $patients;
-            $data['professionals'] = $professionals;
+            $searchQuery = $request->q;
+
+            if ($searchQuery) {
+                $patients = $patients->filter(function ($patient) use ($searchQuery) {
+                    return str_contains(strtolower($patient->name), strtolower($searchQuery)) ||
+                        str_contains(strtolower($patient->last_name), strtolower($searchQuery)) ||
+                        str_contains(strtolower($patient->email), strtolower($searchQuery)) ||
+                        str_contains($patient->dni, $searchQuery);
+                });
+
+                $professionals = $professionals->filter(function ($professional) use ($searchQuery) {
+                    return str_contains(strtolower($professional->name), strtolower($searchQuery)) ||
+                        str_contains(strtolower($professional->last_name), strtolower($searchQuery)) ||
+                        str_contains(strtolower($professional->email), strtolower($searchQuery)) ||
+                        str_contains($professional->dni, $searchQuery);
+                });
+            }
+
+            $data['patients'] = $patients->values();
+            $data['professionals'] = $professionals->values();
+
             Audith::new($id_user, "Listado de resultados", null, 200, null);
         } catch (Exception $e) {
             Log::debug(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()]);
