@@ -27,6 +27,7 @@ Route::group(['middleware' => ['auth:api']], function ($router) {
     // AuthController
     Route::post('logout', [AuthController::class, 'logout']);
     Route::post('auth/password-recovery-token', [AuthController::class, 'auth_password_recovery_token']);
+    Route::post('auth/password-recovery-token-mail', [AuthController::class, 'auth_password_recovery_token_mail']);
 
     // UserController
     Route::post('users/plans', [UserController::class, 'user_plan']);
