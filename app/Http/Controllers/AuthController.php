@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Mail\RecoverPasswordMailable;
+use App\Mail\RecoverPasswordTokenMailable;
 use App\Mail\WelcomeUserMailable;
 use App\Models\Audith;
 use App\Models\BranchOffice;
@@ -239,6 +240,54 @@ class AuthController extends Controller
         }
 
         return response()->json(['message' => 'Contraseña actualizada con exito.'], 200);
+    }
+
+    public function auth_password_recovery_token_mail(Request $request)
+    {
+        $authUser = Auth::user();
+        $is_admin = Auth::user()->id_user_type == UserType::ADMIN;    
+        $id_user = $request->id_user ? $request->id_user : $authUser->id;
+    
+        try {
+            if ($request->id_user && !$is_admin) {
+                return response()->json(['message' => 'No autorizado.'], 403);
+            }
+    
+            $user = User::find($id_user);
+    
+            if (!$user) {
+                return response()->json(['message' => 'Usuario inválido.'], 400);
+            }
+    
+            DB::beginTransaction();
+            
+            $new_password = $request->password;
+            $user->password = $new_password;
+            $user->save();
+    
+            Audith::new($user->id, "Cambio de contraseña", $request->email, 200, null);
+    
+            DB::commit();
+    
+            if ($request->id_user && $is_admin) {
+                try {
+                    Mail::to($user->email)->send(new RecoverPasswordTokenMailable($user, $new_password));
+                    Audith::new($user->id, "Cambio de contraseña", $request->email, 200, null);
+                } catch (Exception $e) {
+                    Audith::new($user->id, "Cambio de contraseña", $request->email, 500, $e->getMessage());
+                    Log::debug(["message" => "Error en cambio de contraseña", "error" => $e->getMessage(), "line" => $e->getLine()]);
+                    return response(["message" => "Error en cambio de contraseña", "error" => $e->getMessage(), "line" => $e->getLine()], 500);
+                }
+            }
+    
+            return response()->json(['message' => 'Contraseña actualizada con éxito.'], 200);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Audith::new(null, "Cambio de contraseña", $request->email, 500, $e->getMessage());
+            Log::debug(["message" => "Error al realizar cambio de contraseña.", "error" => $e->getMessage(), "line" => $e->getLine()]);
+            return response(["message" => "Error al realizar cambio de contraseña", "error" => $e->getMessage(), "line" => $e->getLine()], 500);
+        }
     }
 
     public function auth_account_confirmation(Request $request)
