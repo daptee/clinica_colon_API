@@ -464,7 +464,7 @@ class ProfessionalController extends Controller
                             ->orderBy('id', 'desc');
            
             $data['schedules'] = $query_schedules->get();
-            $data['special_dates'] = ProfessionalSpecialDate::where('date', $request->date)->orderBy('id', 'desc')->get();
+            $data['special_dates'] = ProfessionalSpecialDate::where('date', $request->date)->where('id_professional', $id_professional)->orderBy('id', 'desc')->get();
 
             Audith::new($id_user, "Listado de horarios", ["id_professional", $id_professional], 200, null);
         } catch (Exception $e) {
