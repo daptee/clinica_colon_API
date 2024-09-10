@@ -64,6 +64,7 @@ class ShiftController extends Controller
                     return $query->whereIn('id_professional', $this->getIdsProfessionals(Auth::user()->id));
                 };
             })
+            ->where('id_status', '!=', ShiftStatus::CANCELADO)
             ->orderBy('id', 'desc');
             
             $total = $query->count();
