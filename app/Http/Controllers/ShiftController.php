@@ -67,11 +67,12 @@ class ShiftController extends Controller
             ->where('id_status', '!=', ShiftStatus::CANCELADO)
             ->orderBy('id', 'desc');
             
-            $total = $query->count();
-            $total_per_page = $request->total_per_page ?? 30;
-            $data  = $query->paginate($total_per_page);
-            $current_page = $request->page ?? $data->currentPage();
-            $last_page = $data->lastPage();
+            // $total = $query->count();
+            // $total_per_page = $request->total_per_page ?? 30;
+            // $data  = $query->paginate($total_per_page);
+            $data  = $query->get();
+            // $current_page = $request->page ?? $data->currentPage();
+            // $last_page = $data->lastPage();
 
             Audith::new(Auth::user()->id, "Listado de turnos", null, 200, null);
         } catch (Exception $e) {
@@ -80,7 +81,8 @@ class ShiftController extends Controller
             return response(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()], 500);
         }
 
-        return response(compact("data", "total", "total_per_page", "current_page", "last_page"));
+        // return response(compact("data", "total", "total_per_page", "current_page", "last_page"));
+        return response(compact("data"));
     }
 
     public function getIdsProfessionals($id_admin)
