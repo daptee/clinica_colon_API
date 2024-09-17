@@ -18,13 +18,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use stdClass;
 
 class ShiftController extends Controller
 {
     public function index(Request $request)
     {
         $message = "Error al obtener registros";
-        $data = null;
+        $data = new stdClass;
 
             // ->when($request->specialties != null, function ($query) use ($request) {
             //     return $query->whereHas('specialties_professional', function ($q) use ($request) {
@@ -70,7 +71,7 @@ class ShiftController extends Controller
             // $total = $query->count();
             // $total_per_page = $request->total_per_page ?? 30;
             // $data  = $query->paginate($total_per_page);
-            $data  = $query->get();
+            $data->data = $query->get();
             // $current_page = $request->page ?? $data->currentPage();
             // $last_page = $data->lastPage();
 
