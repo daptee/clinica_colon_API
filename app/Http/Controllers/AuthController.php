@@ -110,54 +110,30 @@ class AuthController extends Controller
         return response(compact("message", "data"));
     }
 
-    // public function auth_login(Request $request)
-    // {
-    //     $validator = Validator::make($request->all(), [
-    //         'email' => 'required',
-    //         'password' => 'required',
-    //     ]);
-    
-    //     if ($validator->fails()) {
-    //         return response()->json([
-    //             'message' => 'Alguna de las validaciones falló',
-    //             'errors' => $validator->errors(),
-    //         ], 422);
-    //     }
-
-    //     $credentials = $request->only('email', 'password');
-    //     // Quitar DNI para login
-    //     $loginField = filter_var($credentials['email'], FILTER_VALIDATE_EMAIL) ? 'email' : 'dni';
-    //     try{
-    //         $user = User::where($loginField , $credentials['email'])->first();
-
-    //         if(!$user)
-    //             return response()->json(['message' => 'Usuario y/o clave no válidos.'], 400);
-
-    //         if (! $token = auth()->attempt([$loginField => $credentials['email'], 'password' => $credentials['password']])) {
-    //             return response()->json(['message' => 'Usuario y/o clave no válidos.'], 401);
-    //         }
-
-    //         Audith::new($user->id, "Login de usuario", $credentials['email'], 200, null);
-
-    //     }catch (Exception $e) {
-    //         Audith::new(null, "Login de usuario", $credentials['email'], 500, $e->getMessage());
-    //         Log::debug(["message" => "No fue posible crear el Token de Autenticación.", "error" => $e->getMessage(), "line" => $e->getLine()]);
-    //         return response()->json(['message' => 'No fue posible crear el Token de Autenticación.'], 500);
-    //     }
-    
-    //     return $this->respondWithToken($token);
-    // }
-
-    public function auth_login(LoginRequest $request)
+    public function auth_login(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required',
+            'password' => 'required',
+        ]);
+    
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Alguna de las validaciones falló',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
         $credentials = $request->only('email', 'password');
+        // Quitar DNI para login
+        $loginField = filter_var($credentials['email'], FILTER_VALIDATE_EMAIL) ? 'email' : 'dni';
         try{
-            $user = User::where('email' , $credentials['email'])->first();
+            $user = User::where($loginField , $credentials['email'])->first();
 
             if(!$user)
                 return response()->json(['message' => 'Usuario y/o clave no válidos.'], 400);
 
-            if (! $token = auth()->attempt($credentials)) {
+            if (! $token = auth()->attempt([$loginField => $credentials['email'], 'password' => $credentials['password']])) {
                 return response()->json(['message' => 'Usuario y/o clave no válidos.'], 401);
             }
 
@@ -170,7 +146,31 @@ class AuthController extends Controller
         }
     
         return $this->respondWithToken($token);
-    } 
+    }
+
+    // public function auth_login(LoginRequest $request)
+    // {
+    //     $credentials = $request->only('email', 'password');
+    //     try{
+    //         $user = User::where('email' , $credentials['email'])->first();
+
+    //         if(!$user)
+    //             return response()->json(['message' => 'Usuario y/o clave no válidos.'], 400);
+
+    //         if (! $token = auth()->attempt($credentials)) {
+    //             return response()->json(['message' => 'Usuario y/o clave no válidos.'], 401);
+    //         }
+
+    //         Audith::new($user->id, "Login de usuario", $credentials['email'], 200, null);
+
+    //     }catch (Exception $e) {
+    //         Audith::new(null, "Login de usuario", $credentials['email'], 500, $e->getMessage());
+    //         Log::debug(["message" => "No fue posible crear el Token de Autenticación.", "error" => $e->getMessage(), "line" => $e->getLine()]);
+    //         return response()->json(['message' => 'No fue posible crear el Token de Autenticación.'], 500);
+    //     }
+    
+    //     return $this->respondWithToken($token);
+    // } 
 
     public function auth_account_recovery(Request $request)
     {
