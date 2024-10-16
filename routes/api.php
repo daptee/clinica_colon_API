@@ -86,6 +86,7 @@ Route::group(['middleware' => ['auth:api']], function ($router) {
     // Turnos
     Route::post('shifts', [ShiftController::class, 'store']);
     Route::get('shifts', [ShiftController::class, 'index']);
+    Route::get('shifts/get/availables', [ShiftController::class, 'get_available_shifts']);
     Route::put('shifts/{id}', [ShiftController::class, 'update']);
     Route::get('shifts/{id}', [ShiftController::class, 'show']);
     Route::get('shifts/get/status', [ShiftController::class, 'get_status_shifts']);
