@@ -143,20 +143,25 @@ class ShiftController extends Controller
      * Generar los turnos disponibles según horarios y descansos.
      */
     private function generateAvailableShifts($schedules, Request $request)
-{
-    $available_shifts = [];
-    $today = new \DateTime();
-    $end_date = (clone $today)->modify('+1 month');
-    $days_in_spanish = $this->getDaysInSpanish();
+    {
+        $available_shifts = [];
+        $today = new \DateTime();
 
-    foreach ($schedules as $schedule) {
-        if ($this->isValidSchedule($schedule, $request)) {
-            $this->generateShiftsForSchedule($schedule, $today, $end_date, $days_in_spanish, $request, $available_shifts);
+        $start_date = $request->input('start_date') ? new \DateTime($request->input('start_date')) : $today;
+        $end_date = $request->input('end_date') ? new \DateTime($request->input('end_date')) : (clone $today)->modify('+1 month');
+    
+        // $end_date = (clone $today)->modify('+1 month');
+        $days_in_spanish = $this->getDaysInSpanish();
+
+        foreach ($schedules as $schedule) {
+            if ($this->isValidSchedule($schedule, $request)) {
+                $this->generateShiftsForSchedule($schedule, $start_date, $end_date, $days_in_spanish, $request, $available_shifts);
+                // $this->generateShiftsForSchedule($schedule, $today, $end_date, $days_in_spanish, $request, $available_shifts);
+            }
         }
-    }
 
-    return $available_shifts;
-}
+        return $available_shifts;
+    }
     
     /**
      * Verificar si el horario del profesional es válido para la especialidad seleccionada.
@@ -170,23 +175,40 @@ class ShiftController extends Controller
     /**
      * Generar los turnos disponibles para un horario específico.
      */
-    private function generateShiftsForSchedule($schedule, $today, $end_date, $days_in_spanish, Request $request, &$available_shifts)
+    // private function generateShiftsForSchedule($schedule, $today, $end_date, $days_in_spanish, Request $request, &$available_shifts)
+    // {
+    //     $special_dates = $this->getProfessionalSpecialDates($schedule->professional->id);
+    //     $taken_shifts = $this->getTakenShifts($schedule, $request);
+    //     $breaks = $schedule->rest_hours->toArray();
+    //     $shift_duration = collect($schedule->professional->data['specialty'])
+    //         ->firstWhere('specialty_id', $request->id_specialty)['shift_duration'];
+    
+    //     $interval = new \DateInterval('PT' . str_replace(' min', '', $shift_duration) . 'M');
+    //     $current_date = clone $today;
+    
+    //     while ($current_date <= $end_date) {
+    //         if ($this->isCompleteSpecialDate($current_date, $special_dates)) {
+    //             $current_date->modify('+1 day');
+    //             continue;
+    //         }
+    
+    //         $this->generateShiftsForDay($schedule, $current_date, $interval, $breaks, $taken_shifts, $days_in_spanish, $special_dates, $available_shifts);
+    //         $current_date->modify('+1 day');
+    //     }
+    // }
+
+    private function generateShiftsForSchedule($schedule, $start_date, $end_date, $days_in_spanish, Request $request, &$available_shifts)
     {
         $special_dates = $this->getProfessionalSpecialDates($schedule->professional->id);
         $taken_shifts = $this->getTakenShifts($schedule, $request);
         $breaks = $schedule->rest_hours->toArray();
         $shift_duration = collect($schedule->professional->data['specialty'])
             ->firstWhere('specialty_id', $request->id_specialty)['shift_duration'];
-    
+
         $interval = new \DateInterval('PT' . str_replace(' min', '', $shift_duration) . 'M');
-        $current_date = clone $today;
-    
+        $current_date = clone $start_date;
+
         while ($current_date <= $end_date) {
-            if ($this->isCompleteSpecialDate($current_date, $special_dates)) {
-                $current_date->modify('+1 day');
-                continue;
-            }
-    
             $this->generateShiftsForDay($schedule, $current_date, $interval, $breaks, $taken_shifts, $days_in_spanish, $special_dates, $available_shifts);
             $current_date->modify('+1 day');
         }
