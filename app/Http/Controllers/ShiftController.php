@@ -227,23 +227,53 @@ class ShiftController extends Controller
     /**
      * Generar turnos para un día específico.
      */
+    // private function generateShiftsForDay($schedule, $current_date, $interval, $breaks, $taken_shifts, $days_in_spanish, $special_dates, &$available_shifts)
+    // {
+    //     $day_in_spanish = $days_in_spanish[$current_date->format('l')] ?? null;
+    
+    //     if ($day_in_spanish === $schedule->day) {
+    //         $start_time = new \DateTime($schedule->start_time);
+    //         $end_time = new \DateTime($schedule->end_time);
+    //         $periods = new \DatePeriod($start_time, $interval, $end_time);
+    
+    //         foreach ($periods as $period) {
+    //             $shift_end = (clone $period)->add($interval);
+    
+    //             if ($this->isAvailableShift($period, $shift_end, $end_time, $breaks, $taken_shifts, $current_date, $special_dates)) {
+    //                 $date = $current_date->format('Y-m-d');
+    //                 $time = $period->format('H:i');
+    
+    //                 $available_shifts[$date][$time][] = [
+    //                     'professional' => $schedule->professional,
+    //                     'start_time' => $period->format('H:i'),
+    //                     'end_time' => $shift_end->format('H:i'),
+    //                 ];
+    //             }
+    //         }
+    //     }
+    // }
+
     private function generateShiftsForDay($schedule, $current_date, $interval, $breaks, $taken_shifts, $days_in_spanish, $special_dates, &$available_shifts)
     {
         $day_in_spanish = $days_in_spanish[$current_date->format('l')] ?? null;
-    
+
         if ($day_in_spanish === $schedule->day) {
             $start_time = new \DateTime($schedule->start_time);
             $end_time = new \DateTime($schedule->end_time);
             $periods = new \DatePeriod($start_time, $interval, $end_time);
-    
+
             foreach ($periods as $period) {
                 $shift_end = (clone $period)->add($interval);
-    
+
                 if ($this->isAvailableShift($period, $shift_end, $end_time, $breaks, $taken_shifts, $current_date, $special_dates)) {
                     $date = $current_date->format('Y-m-d');
                     $time = $period->format('H:i');
-    
-                    $available_shifts[$date][$time][] = [
+
+                    // Encontrar o crear la estructura del turno con la misma fecha y hora
+                    $shift_index = $this->findOrCreateShiftIndex($available_shifts, $date, $time);
+
+                    // Agregar el profesional al turno correspondiente
+                    $available_shifts[$shift_index]['doctors'][] = [
                         'professional' => $schedule->professional,
                         'start_time' => $period->format('H:i'),
                         'end_time' => $shift_end->format('H:i'),
@@ -252,6 +282,28 @@ class ShiftController extends Controller
             }
         }
     }
+
+    /**
+     * Encuentra el índice del turno en el array o crea uno nuevo si no existe.
+     */
+    private function findOrCreateShiftIndex(&$available_shifts, $date, $time)
+    {
+        foreach ($available_shifts as $index => $shift) {
+            if ($shift['date'] === $date && $shift['time'] === $time) {
+                return $index;
+            }
+        }
+
+        // Si no se encuentra, crear una nueva entrada y devolver su índice
+        $available_shifts[] = [
+            'date' => $date,
+            'time' => $time,
+            'doctors' => []
+        ];
+
+        return array_key_last($available_shifts); // Obtener el índice del último elemento
+    }
+
     
     /**
      * Verificar si un turno está disponible.
