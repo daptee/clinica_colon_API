@@ -38,7 +38,8 @@ class PatientController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email',
+            'email' => 'nullable|string|email|max:255|unique:users,email',
+            'dni' => 'required|unique:users,dni',
         ]);
     
         if ($validator->fails()) {
@@ -100,12 +101,16 @@ class PatientController extends Controller
             'name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => [
-                'required',
+                'nullable',
                 'string',
                 'email',
                 'max:255',
                 Rule::unique('users')->ignore($id),
             ],
+            'dni' => [
+                'required',
+                Rule::unique('users')->ignore($id),
+            ]
         ]);
     
         if ($validator->fails()) {
