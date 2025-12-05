@@ -155,14 +155,12 @@ class GetsFunctionsController extends Controller
             $patientIds = $this->getIdsPatients(Auth::user()->id_user_type, Auth::user()->id);
             $professionalIds = $this->getIdsProfessionals(Auth::user()->id);
 
-            $patients = User::with(['status'])
-                ->select(['id', 'name', 'last_name', 'dni', 'email', 'id_user_status', 'data', 'profile_picture', 'created_at'])
+            $patients = User::select(['id', 'name', 'last_name', 'profile_picture'])
                 ->whereIn('id', $patientIds)
                 ->orderBy('id', 'desc')
                 ->get();
 
-            $professionals = User::with(['status'])
-                ->select(['id', 'name', 'last_name', 'dni', 'email', 'id_user_status', 'data', 'profile_picture', 'created_at'])
+            $professionals = User::select(['id', 'name', 'last_name', 'profile_picture'])
                 ->whereIn('id', $professionalIds)
                 ->orderBy('id', 'desc')
                 ->get();
@@ -172,16 +170,12 @@ class GetsFunctionsController extends Controller
             if ($searchQuery) {
                 $patients = $patients->filter(function ($patient) use ($searchQuery) {
                     return str_contains(strtolower($patient->name), strtolower($searchQuery)) ||
-                        str_contains(strtolower($patient->last_name), strtolower($searchQuery)) ||
-                        str_contains(strtolower($patient->email), strtolower($searchQuery)) ||
-                        str_contains($patient->dni, $searchQuery);
+                        str_contains(strtolower($patient->last_name), strtolower($searchQuery));
                 });
 
                 $professionals = $professionals->filter(function ($professional) use ($searchQuery) {
                     return str_contains(strtolower($professional->name), strtolower($searchQuery)) ||
-                        str_contains(strtolower($professional->last_name), strtolower($searchQuery)) ||
-                        str_contains(strtolower($professional->email), strtolower($searchQuery)) ||
-                        str_contains($professional->dni, $searchQuery);
+                        str_contains(strtolower($professional->last_name), strtolower($searchQuery));
                 });
             }
 

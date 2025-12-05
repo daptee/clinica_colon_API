@@ -204,6 +204,41 @@ class PatientController extends Controller
         }
     }
 
+    public function get_patients_optimized(Request $request)
+    {
+        if(Auth::user()->id_user_type != UserType::ADMIN && Auth::user()->id_user_type != UserType::PROFESIONAL)
+            return response(["message" => "Usuario invalido"], 400);
+
+        $message = "Error al obtener registros";
+
+        try {
+            $query = $this->model::select(['id', 'name', 'last_name'])
+                ->where('id_user_type', UserType::PACIENTE)
+                ->whereIn('id', $this->getIdsPatients(Auth::user()->id_user_type, Auth::user()->id))
+                ->orderBy('id', 'desc');
+
+            if ($request->filled('q')) {
+                $search = mb_strtolower(trim($request->input('q')));
+
+                $query->where(function ($q) use ($search) {
+                    $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(last_name) LIKE ?', ["%{$search}%"]);
+                });
+            }
+
+            $data = $query->get();
+
+            Audith::new(Auth::user()->id, "Listado de pacientes", null, 200, null);
+
+            return response(compact("data"));
+
+        } catch (Exception $e) {
+            Audith::new(Auth::user()->id, "Listado de pacientes", null, 500, $e->getMessage());
+            Log::debug(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()]);
+            return response(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()], 500);
+        }
+    }
+
     public function getIdsPatients($id_user_type, $id_user)
     {
         $ids_users = [$id_user];

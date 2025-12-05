@@ -24,7 +24,7 @@ class Shift extends Model
         'id_specialty'
     ];
 
-    protected $hidden = ['id_patient', 'id_professional', 'id_branch_office', 'id_status', 'updated_at', 'deleted_at'];
+    protected $hidden = ['id_branch_office', 'id_status', 'updated_at', 'deleted_at'];
 
     protected $casts = [
         'overshift' => 'boolean',

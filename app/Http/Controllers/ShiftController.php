@@ -30,65 +30,107 @@ class ShiftController extends Controller
         $message = "Error al obtener registros";
         $data = new stdClass;
 
-            // ->when($request->specialties != null, function ($query) use ($request) {
-            //     return $query->whereHas('specialties_professional', function ($q) use ($request) {
-            //         $q->whereIn('id_specialty', $request->specialties);
-            //         if($request->professionals)
-            //             $q->whereIn('id_professional', $request->professionals);
-            //     });
-            // })
-            
         try {
-            $query = Shift::with(['patient', 'professional', 'branch_office', 'status'])
-            ->when($request->date_from, function ($query) use ($request) {
-                return $query->where('date', '>=', $request->date_from);
-            })
-            ->when($request->date_to, function ($query) use ($request) {
-                return $query->where('date', '<=', $request->date_to);
-            })
-            ->when($request->status, function ($query) use ($request) {
-                return $query->whereIn('id_status', $request->status);
-            })
-            ->when($request->professionals, function ($query) use ($request) {
-                return $query->whereIn('id_professional', $request->professionals);
-            })
-            ->when($request->specialties, function ($query) use ($request) {
-                return $query->whereIn('id_specialty', $request->specialties);
-            })
-            ->when($request->branch_offices, function ($query) use ($request) {
-                return $query->whereIn('id_branch_office', $request->branch_offices);
-            })
-            ->when(Auth::user()->id, function ($query) use ($request) {
+            $query = Shift::select([
+                    'id',
+                    'id_patient',
+                    'id_professional',
+                    'date',
+                    'time',
+                    'id_branch_office',
+                    'overshift',
+                    'comments',
+                    'id_status',
+                    'id_specialty',
+                    'created_at',
+                ])
+                ->where('id_status', '!=', ShiftStatus::CANCELADO);
 
-                if(Auth::user()->id_user_type == UserType::PROFESIONAL){
-                    return $query->where('id_professional', Auth::user()->id);
-                }else if(Auth::user()->id_user_type == UserType::PACIENTE){
-                    return $query->where('id_patient', Auth::user()->id);
-                }else if(Auth::user()->id_user_type == UserType::ADMIN){
-                    return $query->whereIn('id_professional', $this->getIdsProfessionals(Auth::user()->id));
-                };
-            })
-            ->where('id_status', '!=', ShiftStatus::CANCELADO)
-            ->orderBy('id', 'desc');
-            
-            // $total = $query->count();
-            // $total_per_page = $request->total_per_page ?? 30;
-            // $data  = $query->paginate($total_per_page);
-            $data->data = $query->get();
-            // $current_page = $request->page ?? $data->currentPage();
-            // $last_page = $data->lastPage();
+            // Filtros
+            if ($request->date_from) {
+                $query->where('date', '>=', $request->date_from);
+            }
+
+            if ($request->date_to) {
+                $query->where('date', '<=', $request->date_to);
+            }
+
+            if ($request->status) {
+                $query->whereIn('id_status', $request->status);
+            }
+
+            if ($request->professionals) {
+                $query->whereIn('id_professional', $request->professionals);
+            }
+
+            if ($request->specialties) {
+                $query->whereIn('id_specialty', $request->specialties);
+            }
+
+            if ($request->branch_offices) {
+                $query->whereIn('id_branch_office', $request->branch_offices);
+            }
+
+            // Filtros por tipo de usuario
+            if (Auth::user()->id_user_type == UserType::PROFESIONAL) {
+                $query->where('id_professional', Auth::user()->id);
+
+            } else if (Auth::user()->id_user_type == UserType::PACIENTE) {
+                $query->where('id_patient', Auth::user()->id);
+
+            } else if (Auth::user()->id_user_type == UserType::ADMIN) {
+                $query->whereIn('id_professional', $this->getIdsProfessionals(Auth::user()->id));
+            }
+
+            // Traemos solo algunos campos de las relaciones
+            $query->with([
+                'patient:id,name,last_name',
+                'professional:id,name,last_name',
+                'professional.specialties:id,id_user,id_specialty,shift_duration',
+                'branch_office:id,name',
+                'status:id,name'
+            ]);
+
+            $query->orderBy('id', 'desc');
+
+            // Obtenemos turnos
+            $shifts = $query->get();
+
+            // 🔥 Transformamos para enviar solo lo necesario
+            $data->data = $shifts->map(function ($item) {
+
+                // Buscar la especialidad del profesional matcheando id_specialty del turno
+                $matchedSpecialty = $item->professional->specialties
+                    ->firstWhere('id_specialty', $item->id_specialty);
+
+                return [
+                    'id'                 => $item->id,
+                    'shift_duration'     => $matchedSpecialty->shift_duration ?? null,
+                    'branch_office_id'   => $item->id_branch_office,
+                    'date'               => $item->date,
+                    'time'               => $item->time,
+                    'patient_name'       => $item->patient->name ?? null,
+                    'patient_last_name'  => $item->patient->last_name ?? null,
+                    'overshift'          => $item->overshift,
+                    'comments'           => $item->comments,
+                    'created_at'         => $item->created_at,
+                    'patient_id'         => $item->id_patient,
+                    'professional_id'    => $item->id_professional,
+                    'id_specialty'       => $item->id_specialty,
+                    'status_id'          => $item->id_status,
+                ];
+            });
 
             Audith::new(Auth::user()->id, "Listado de turnos", null, 200, null);
+
         } catch (Exception $e) {
             Audith::new(Auth::user()->id, "Listado de turnos", null, 500, $e->getMessage());
             Log::debug(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()]);
             return response(["message" => $message, "error" => $e->getMessage(), "line" => $e->getLine()], 500);
         }
 
-        // return response(compact("data", "total", "total_per_page", "current_page", "last_page"));
         return response(compact("data"));
     }
-
        
     public function get_available_shifts(Request $request)
     {
