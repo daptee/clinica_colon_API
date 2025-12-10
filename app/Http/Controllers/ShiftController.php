@@ -85,8 +85,7 @@ class ShiftController extends Controller
             // Traemos solo algunos campos de las relaciones
             $query->with([
                 'patient:id,name,last_name',
-                'professional:id,name,last_name',
-                'professional.specialties:id,id_user,id_specialty,shift_duration',
+                'professional:id,name,last_name,data',
                 'branch_office:id,name',
                 'status:id,name'
             ]);
@@ -99,13 +98,17 @@ class ShiftController extends Controller
             // 🔥 Transformamos para enviar solo lo necesario
             $data->data = $shifts->map(function ($item) {
 
-                // Buscar la especialidad del profesional matcheando id_specialty del turno
-                $matchedSpecialty = $item->professional->specialties
-                    ->firstWhere('id_specialty', $item->id_specialty);
+                // Buscar la especialidad del profesional en el JSON data
+                $shift_duration = null;
+                if (isset($item->professional->data['specialty']) && is_array($item->professional->data['specialty'])) {
+                    $matchedSpecialty = collect($item->professional->data['specialty'])
+                        ->firstWhere('specialty_id', $item->id_specialty);
+                    $shift_duration = $matchedSpecialty['shift_duration'] ?? null;
+                }
 
                 return [
                     'id'                 => $item->id,
-                    'shift_duration'     => $matchedSpecialty->shift_duration ?? null,
+                    'shift_duration'     => $shift_duration,
                     'branch_office_id'   => $item->id_branch_office,
                     'date'               => $item->date,
                     'time'               => $item->time,
